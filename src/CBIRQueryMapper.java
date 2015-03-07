@@ -1,25 +1,17 @@
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.util.Arrays;
-import java.util.Comparator;
-
-import javax.imageio.ImageIO;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.util.ReflectionUtils;
 
 
@@ -28,6 +20,7 @@ public class CBIRQueryMapper extends Mapper<Object, Text, Text, Text> {
 	private static Log logger = LogFactory
 			.getLog(CBIRQueryMapper.class);
 
+	@SuppressWarnings("deprecation")
 	public void map(Object key, Text value, Context contex) throws IOException,
 			InterruptedException {
 		logger.info("map method called.. " + value.toString() + "\n");
@@ -49,6 +42,8 @@ public class CBIRQueryMapper extends Mapper<Object, Text, Text, Text> {
 		for (int i = 0; i < q.length; i++) {
 			queryFeatureVector[i] = Double.parseDouble(q[i]);
 		}
+		Text t1 = new Text();
+		Text t2 = new Text();
 		try {
 			reader = new SequenceFile.Reader(fs, path, conf);
 			Writable k = (Writable) ReflectionUtils.newInstance(
@@ -56,8 +51,7 @@ public class CBIRQueryMapper extends Mapper<Object, Text, Text, Text> {
 			Writable v = (Writable) ReflectionUtils.newInstance(
 					reader.getValueClass(), conf);
 			long position = reader.getPosition();
-			Text t1 = new Text();
-			Text t2 = new Text();
+
 			IntWritable c = new IntWritable();
 
 			while (reader.next(k, v)) {
@@ -68,9 +62,9 @@ public class CBIRQueryMapper extends Mapper<Object, Text, Text, Text> {
 				position = reader.getPosition(); // beginning of next record
 
 				t2.set(v.toString());
-				//logger.info(position + " " + syncSeen + "\t" + t1.toString()
-				//		+ "\t" + t2.toString() + "\t"
-				//		+ reader.getValueClassName());
+				// logger.info(position + " " + syncSeen + "\t" + t1.toString()
+				// + "\t" + t2.toString() + "\t"
+				// + reader.getValueClassName());
 
 				/*
 				 * This is where we compute the distance between images in
@@ -87,53 +81,36 @@ public class CBIRQueryMapper extends Mapper<Object, Text, Text, Text> {
 				}
 				dObj[objCount] = new DistanceObject(t1.toString(), dist);
 				objCount++;
+				// contex.write(t1, t2);
+			}
+		} catch (Exception e) {
+			logger.info("Probably, some file-related issue has occurred. Exiting.");
+		} finally {
+			if (reader != null)
+				reader.close();
+
+			// sort the figures
+			dObj = sortDistanceObjects(dObj, objCount);
+
+			// finally, output only the top 'N' figures.
+			int o = Math.min(objCount, 4);
+			for (int i = 0; i < o; i++) {
+				//	Let all the keys be the same
+				//	This is supposed to be an optimization.
+				t1.set("0");
+				t2.set(dObj[i].getKey().toString() + "_r_" + Double.toString(dObj[i].getValue()));
+				logger.info("sending\t" + t1.toString() + "\t" + t2.toString());
 				contex.write(t1, t2);
 			}
-		} finally {
-			reader.close();
-			sortDistanceObjects(dObj, objCount);
 		}
 	}
 
-	private void sortDistanceObjects(DistanceObject[] dObj, int objCount) {
+	private DistanceObject[] sortDistanceObjects(DistanceObject[] dObj, int objCount) {
 		// TODO Auto-generated method stub
-		Arrays.sort(dObj, 0, objCount, new DistanceObjectComparator());
+		Arrays.sort(dObj, 0, objCount-1, new DistanceObjectComparator());
 		for(int i=0;i<objCount;i++){
 			logger.info(dObj[i].getKey() + "\t" + dObj[i].getValue());
 		}
-	}
-}
-
-class DistanceObjectComparator implements Comparator<DistanceObject> {
-
-	@Override
-	public int compare(DistanceObject o1, DistanceObject o2) {
-		// TODO Auto-generated method stub
-		double v1 = o1.getValue();
-		double v2 = o2.getValue();
-		return (v1 < v2 ? -1 : (v1 == v2 ? 0 : 1));
-	}	
-}
-
-class DistanceObject {
-	private double value = 9999999999999.999999;
-	private String key = "";
-	
-	DistanceObject(String k, double v){
-		this.key = k;
-		this.value = v;
-	}
-	
-	void put(String k, double v){
-		this.key = k;
-		this.value = v;
-	}
-	
-	double getValue(){
-		return this.value;
-	}
-	
-	String getKey(){
-		return this.key;
+		return dObj;
 	}
 }

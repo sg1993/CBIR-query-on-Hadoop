@@ -65,14 +65,14 @@ public class CBIRQueryDriver {
 		job.setOutputValueClass(Text.class);
 
 		job.setMapperClass(CBIRQueryMapper.class);
-		// job.setReducerClass(SequenceFileToImageReducer.class);
+		job.setReducerClass(CBIRQueryReducer.class);
 
 		job.setInputFormatClass(TextInputFormat.class);
-		// job.setOutputFormatClass(TextOutputFormat.class);
-		// job.setNumReduceTasks(numOutputFiles);
+		//job.setOutputFormatClass(TextOutputFormat.class);
+		job.setNumReduceTasks(1);
 		// LazyOutputFormat.setOutputFormatClass(job,
 		// SequenceFileOutputFormat.class);
-		// job.setPartitionerClass(SequenceFilePartitioner.class);
+		job.setPartitionerClass(CBIRQueryPartitioner.class);
 
 		for (int i = 0; i < args.length - 2; i++) {
 			// FileInputFormat.setInputPaths(job, new Path(args[i]));
