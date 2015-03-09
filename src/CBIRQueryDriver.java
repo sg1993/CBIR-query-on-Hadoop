@@ -26,7 +26,7 @@ public class CBIRQueryDriver {
 		}
 
 		Configuration conf = new Configuration();
-		String queryFilename = args[args.length - 2], s = "";
+		String queryFilename = args[args.length - 3], s = "";
 		/**
 		 * Compute feature-vector for the given query image once.
 		 **/
@@ -56,8 +56,10 @@ public class CBIRQueryDriver {
 		} finally {
 			IOUtils.closeStream(in);
 		}
-
+		
+		conf.set("Query_file_name", queryFilename);
 		conf.set("Query_image_feature_vector", s);
+		conf.set("Num_results", args[args.length-2]);
 		// conf.set("NUM_REDUCERS", Integer.toString(numOutputFiles));
 		Job job = Job.getInstance(conf);
 
@@ -74,7 +76,7 @@ public class CBIRQueryDriver {
 		// SequenceFileOutputFormat.class);
 		job.setPartitionerClass(CBIRQueryPartitioner.class);
 
-		for (int i = 0; i < args.length - 2; i++) {
+		for (int i = 0; i < args.length - 3; i++) {
 			// FileInputFormat.setInputPaths(job, new Path(args[i]));
 			MultipleInputs.addInputPath(job, new Path(args[i]),
 					TextInputFormat.class);

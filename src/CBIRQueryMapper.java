@@ -93,7 +93,8 @@ public class CBIRQueryMapper extends Mapper<Object, Text, Text, Text> {
 			dObj = sortDistanceObjects(dObj, objCount);
 
 			// finally, output only the top 'N' figures.
-			int o = Math.min(objCount, 4);
+			int r = Integer.parseInt(contex.getConfiguration().get("Num_results"));
+			int o = Math.min(objCount, r);
 			for (int i = 0; i < o; i++) {
 				//	Let all the keys be the same
 				//	This is supposed to be an optimization.
@@ -105,10 +106,11 @@ public class CBIRQueryMapper extends Mapper<Object, Text, Text, Text> {
 		}
 	}
 
-	private DistanceObject[] sortDistanceObjects(DistanceObject[] dObj, int objCount) {
+	private DistanceObject[] sortDistanceObjects(DistanceObject[] dObj,
+			int objCount) {
 		// TODO Auto-generated method stub
-		Arrays.sort(dObj, 0, objCount-1, new DistanceObjectComparator());
-		for(int i=0;i<objCount;i++){
+		Arrays.sort(dObj, 0, objCount, new DistanceObjectComparator());
+		for (int i = 0; i < objCount; i++) {
 			logger.info(dObj[i].getKey() + "\t" + dObj[i].getValue());
 		}
 		return dObj;

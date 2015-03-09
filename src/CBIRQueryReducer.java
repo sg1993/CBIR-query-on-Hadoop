@@ -1,8 +1,14 @@
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -23,12 +29,13 @@ public class CBIRQueryReducer extends Reducer<Text, Text, Text, Text> {
 
 	private static DistanceObject[] dObj;
 	private static int objCount = 0;
+	private static String queryResult = "";
 
 	protected void setup(Context context) throws IOException,
 			InterruptedException {
 		logger.info("Setup called");
 		dObj = new DistanceObject[10000000];
-		objCount = 0;
+		objCount = 0; 
 	}
 
 	public void reduce(Text key, Iterable<Text> values, Context context)
@@ -52,7 +59,7 @@ public class CBIRQueryReducer extends Reducer<Text, Text, Text, Text> {
 	
 	private DistanceObject[] sortDistanceObjects(DistanceObject[] dObj, int objCount) {
 		// TODO Auto-generated method stub
-		Arrays.sort(dObj, 0, objCount-1, new DistanceObjectComparator());
+		Arrays.sort(dObj, 0, objCount, new DistanceObjectComparator());
 		logger.info("\n\nSorted\n\n");
 		for(int i=0;i<objCount;i++){
 			logger.info(dObj[i].getKey() + "\t" + dObj[i].getValue());
@@ -62,6 +69,35 @@ public class CBIRQueryReducer extends Reducer<Text, Text, Text, Text> {
 
 	protected void cleanup(Context context) throws IOException,
 			InterruptedException {
+		// A single reducer ensures
+		// that cleanup() will be called
+		// only once.
+		Configuration conf = context.getConfiguration();
+		String uri = conf.get("Query_file_name");
+		Path f = new Path(uri + ".queresult");
+		FileSystem fs = FileSystem.get(conf);
+		if (fs.exists(f)) {
+			// File already exists.
+			// Delete the file before proceeding.
+			logger.info("Deleting existing file");
+			fs.delete(f, true);
+		}
+
+		// proceed to write the
+		// query results to the
+		// created file.
+
+		int r = Integer.parseInt(conf.get("Num_results"));
+		int o = Math.min(objCount, r);
+		for (int i = 0; i < o; i++) {
+			queryResult += dObj[i].getKey() + "\n";
+		}
+		queryResult += dObj[o].getKey();
+		FSDataOutputStream os = fs.create(f);
+		BufferedWriter br = new BufferedWriter(new OutputStreamWriter(os,
+				"UTF-8"));
+		br.write(queryResult);
+		br.close();
 	}
 }
 
