@@ -1,3 +1,4 @@
+package mapreduce;
 import java.util.Comparator;
 
 public class DistanceObject {

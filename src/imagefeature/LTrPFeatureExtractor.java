@@ -1,3 +1,5 @@
+package imagefeature;
+
 import java.awt.image.BufferedImage;
 import java.awt.image.Raster;
 
@@ -7,9 +9,8 @@ import org.apache.commons.logging.LogFactory;
 public class LTrPFeatureExtractor {
 	private BufferedImage grayImage = null;
 	private int width, height;
-	private int image[][], fod[][]; // fod stores the first order
-									// derivative and sod, the
-									// second order derivative
+	private int image[][], fod[][], mag[][]; // fod stores the first order
+												// derivative
 	private int uniPattern[] = { 0, 1, 2, 3, 4, 6, 7, 8, 12, 14, 15, 16, 24,
 			28, 30, 31, 32, 48, 56, 60, 62, 63, 64, 96, 112, 120, 124, 126,
 			127, 128, 129, 131, 135, 143, 159, 191, 192, 193, 195, 199, 207,
@@ -18,19 +19,18 @@ public class LTrPFeatureExtractor {
 	private boolean isUniform[];
 	private static Log logger = LogFactory.getLog(LTrPFeatureExtractor.class);
 	private int histogram[][], index[];
-	private int[] featureVector = null;
-	private int[][] mag = null;
+	private double[] featureVector = null;
 
 	public LTrPFeatureExtractor(BufferedImage img) {
 		grayImage = img;
 		width = grayImage.getWidth();
-		height = img.getHeight();
+		height = grayImage.getHeight();
 		byte[] pixel = null;
 		image = new int[height + 2][width + 2];
 		if (grayImage.getType() == BufferedImage.TYPE_BYTE_GRAY) {
 			Raster raster = grayImage.getRaster();
 			pixel = (byte[]) raster.getDataElements(0, 0, width, height, pixel);
-			int l = pixel.length, k = 0;
+			int k = 0;
 			// String s = "";
 			for (int i = 1; i <= height; i++) {
 				for (int j = 1; j <= width; j++) {
@@ -221,13 +221,13 @@ public class LTrPFeatureExtractor {
 		for (int i = 1; i <= height; i++) {
 			for (int j = 1; j <= width; j++) {
 				mPattern[0] = (mag[i][j] <= mag[i][j + 1]) ? 1 : 0;
-				mPattern[1] = (mag[i][j] == mag[i - 1][j + 1]) ? 1 : 0;
-				mPattern[2] = (mag[i][j] == mag[i - 1][j]) ? 1 : 0;
-				mPattern[3] = (mag[i][j] == mag[i - 1][j - 1]) ? 1 : 0;
-				mPattern[4] = (mag[i][j] == mag[i][j - 1]) ? 1 : 0;
-				mPattern[5] = (mag[i][j] == mag[i + 1][j - 1]) ? 1 : 0;
-				mPattern[6] = (mag[i][j] == mag[i + 1][j]) ? 1 : 0;
-				mPattern[7] = (mag[i][j] == mag[i + 1][j + 1]) ? 1 : 0;
+				mPattern[1] = (mag[i][j] <= mag[i - 1][j + 1]) ? 1 : 0;
+				mPattern[2] = (mag[i][j] <= mag[i - 1][j]) ? 1 : 0;
+				mPattern[3] = (mag[i][j] <= mag[i - 1][j - 1]) ? 1 : 0;
+				mPattern[4] = (mag[i][j] <= mag[i][j - 1]) ? 1 : 0;
+				mPattern[5] = (mag[i][j] <= mag[i + 1][j - 1]) ? 1 : 0;
+				mPattern[6] = (mag[i][j] <= mag[i + 1][j]) ? 1 : 0;
+				mPattern[7] = (mag[i][j] <= mag[i + 1][j + 1]) ? 1 : 0;
 
 				pattern = 0;
 
@@ -255,16 +255,24 @@ public class LTrPFeatureExtractor {
 		// Only the features remain to be extracted
 
 		// set up the feature-vector
-		featureVector = new int[767];
+		featureVector = new double[767];
+		int n = width * height;
 		int c = 0;
 		for (int i = 0; i < 13; i++) {
 			for (int j = 0; j < 59; j++) {
-				featureVector[c++] = histogram[i][j];
+				featureVector[c] = histogram[i][j];
+				featureVector[c] /= (double) n;
+				c++;
 			}
 		}
+
+		// free up some data
+		image = null;
+		histogram = null;
+		mag = fod = null;
 	}
 
-	public int[] getFeatureVector() {
+	public double[] getFeatureVector() {
 		return featureVector;
 	}
 }

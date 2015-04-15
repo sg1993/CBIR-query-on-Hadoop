@@ -1,8 +1,9 @@
+package mapreduce;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.Arrays;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -10,7 +11,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 
 /*
@@ -35,33 +35,34 @@ public class CBIRQueryReducer extends Reducer<Text, Text, Text, Text> {
 			InterruptedException {
 		logger.info("Setup called");
 		dObj = new DistanceObject[10000000];
-		objCount = 0; 
+		objCount = 0;
 	}
 
 	public void reduce(Text key, Iterable<Text> values, Context context)
 			throws IOException, InterruptedException {
-		
+
 		String k = "";
 		double v = 9999999999.9999999;
-		
-		for(Text value : values){
-			String a[] = value.toString().split("_r_");
+
+		for (Text value : values) {
+			String a[] = value.toString().split("_val_");
 			k = a[0];
 			v = Double.parseDouble(a[1]);//
 			logger.info(k + "\t" + v + "\t" + value.toString());
 			dObj[objCount] = new DistanceObject(k, v);
 			objCount++;
 		}
-		
+
 		// sort the figures
 		dObj = sortDistanceObjects(dObj, objCount);
 	}
-	
-	private DistanceObject[] sortDistanceObjects(DistanceObject[] dObj, int objCount) {
+
+	private DistanceObject[] sortDistanceObjects(DistanceObject[] dObj,
+			int objCount) {
 		// TODO Auto-generated method stub
 		Arrays.sort(dObj, 0, objCount, new DistanceObjectComparator());
 		logger.info("\n\nSorted\n\n");
-		for(int i=0;i<objCount;i++){
+		for (int i = 0; i < objCount; i++) {
 			logger.info(dObj[i].getKey() + "\t" + dObj[i].getValue());
 		}
 		return dObj;
@@ -98,13 +99,5 @@ public class CBIRQueryReducer extends Reducer<Text, Text, Text, Text> {
 				"UTF-8"));
 		br.write(queryResult);
 		br.close();
-	}
-}
-
-class CBIRQueryPartitioner extends Partitioner<Text, Text> {
-
-	@Override
-	public int getPartition(Text key, Text value, int numReduceTasks) {
-		return 0;
 	}
 }
